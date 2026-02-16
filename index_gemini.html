@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedCards Pro - Plataforma de Estudos</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Anton&display=swap" rel="stylesheet">
+    
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        display: ['Anton', 'sans-serif'],
+                    },
+                    colors: {
+                        medical: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%); min-height: 100vh; }
+        
+        /* Scrollbar Personalizada */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Card Render Styles */
+        .flashcard-render-container {
+            position: relative; width: 100%; aspect-ratio: 1080 / 1450;
+            overflow: hidden; border-radius: 1rem; background-color: #1e293b;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        .flashcard-bg-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+        .flashcard-artwork {
+            position: absolute; left: 50%; transform: translateX(-50%); bottom: 8%; 
+            width: auto; max-height: 45%; max-width: 85%; 
+            object-fit: contain; z-index: 5; border-radius: 1rem; pointer-events: none;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+        }
+        .flashcard-text-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 6%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            text-align: center; z-index: 10; 
+        }
+        .font-flashcard { font-family: 'Anton', sans-serif; line-height: 1.1; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        #front-card-render .font-flashcard { font-size: clamp(2rem, 9cqi, 3.5rem); }
+        #back-card-render .flashcard-text-overlay { justify-content: flex-start; padding-top: 15%; height: 50%; }
+        #back-card-render .font-flashcard { font-size: clamp(1rem, 5cqi, 2rem); }
+        
+        .aux-text {
+            position: absolute; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700;
+            font-size: clamp(0.6rem, 2cqi, 0.8rem); color: white; background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px); padding: 4px 10px; border-radius: 6px; z-index: 11; text-transform: uppercase; letter-spacing: 0.05em;
+        }
+
+        /* Efeitos de UI */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .input-field {
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+        .input-field:focus {
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+            outline: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        }
+        .btn-google {
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+        }
+        .btn-google:hover { background-color: #f8fafc; border-color: #cbd5e1; }
+    </style>
+</head>
+<body class="p-4 md:p-6 pb-20" onload="handleClientLoad()">
+
+    <nav class="max-w-7xl mx-auto mb-8 glass-panel rounded-2xl px-6 py-4 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-medical-500 text-white p-2 rounded-lg shadow-lg shadow-medical-500/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight">MedCards<span class="text-medical-500">Pro</span></h1>
+                <p class="text-xs text-slate-500 font-medium">Flashcards + Revisão Espaçada</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <div id="auth-indicator" class="hidden flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-bold border border-green-200">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Calendar Conectado
+            </div>
+            <button id="authorize_button" class="btn-google bg-white text-slate-600 px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 shadow-sm" onclick="handleAuthClick()">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" class="w-4 h-4">
+                Entrar com Google
+            </button>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <div class="lg:col-span-5 space-y-6">
+            <div class="glass-panel p-6 rounded-2xl shadow-xl shadow-slate-200/50 sticky top-4">
+                <div class="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4">
+                    <span class="text-2xl">⚡</span>
+                    <h2 class="text-lg font-bold text-slate-800">Criar Novo Flashcard</h2>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-5">
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Matéria</label>
+                        <input type="text" id="input-subject" class="input-field w-full p-3 rounded-xl bg-slate-50 text-sm font-medium" placeholder="Ex: Cardiologia">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Conceito</label>
+                        <input type="text" id="input-concept" class="input-field w-full p-3 rounded-xl bg-slate-50 text-sm font-medium" placeholder="Ex: IAM">
+                    </div>
+                </div>
+
+                <div class="mb-5 space-y-1">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Ilustração (Opcional)</label>
+                    <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition relative overflow-hidden group">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6 text-slate-400 group-hover:text-medical-500 transition">
+                            <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <p class="text-xs">Clique para enviar imagem</p>
+                        </div>
+                        <input type="file" id="input-image" accept="image/*" class="hidden" />
+                        <img id="preview-thumb" class="absolute inset-0 w-full h-full object-contain bg-slate-800 hidden opacity-90" />
+                    </label>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Pergunta (Frente)</label>
+                        <textarea id="input-q" rows="2" class="input-field w-full p-3 rounded-xl bg-white text-sm font-medium resize-none" placeholder="Digite a pergunta aqui..."></textarea>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Resposta (Verso)</label>
+                        <textarea id="input-a" rows="3" class="input-field w-full p-3 rounded-xl bg-white text-sm font-medium resize-none" placeholder="Digite a resposta completa..."></textarea>
+                    </div>
+                </div>
+
+                <button id="btn-save" class="btn-primary w-full text-white font-bold py-4 rounded-xl shadow-lg shadow-medical-500/30 flex items-center justify-center gap-2 text-sm uppercase tracking-wide">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg>
+                    Salvar na Biblioteca
+                </button>
+            </div>
+        </div>
+
+        <div class="lg:col-span-7">
+            <div class="glass-panel rounded-2xl shadow-xl shadow-slate-200/50 overflow-hidden min-h-[700px] flex flex-col">
+                <div class="p-6 border-b border-slate-100 bg-white/50 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Minha Biblioteca</h2>
+                        <p class="text-xs text-slate-500">Histórico de Cards Gerados</p>
+                    </div>
+                    <button onclick="clearStorage()" class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition font-semibold">Limpar Tudo</button>
+                </div>
+                
+                <div id="library-container" class="p-6 space-y-4 flex-1 overflow-y-auto bg-slate-50/50">
+                    <div class="flex flex-col items-center justify-center h-full text-slate-400 opacity-60">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                        <p class="font-medium">Sua biblioteca está vazia</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-preview" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-y-auto p-8 relative shadow-2xl">
+            <button onclick="closeModal()" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full p-2 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h3 class="text-2xl font-bold mb-6 text-center text-slate-800">Visualização & Download</h3>
+            <div id="modal-render-area" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÃO GOOGLE API ---
+        const CLIENT_ID = '477548483924-e8aritdjhs9emuu23s67cqa4pcc0kc4j.apps.googleusercontent.com'; 
+        const API_KEY = 'AIzaSyBCi_WyOv0M6QPiIklXgP4DshN8Y6vWM3s'; 
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+        const BG_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="; 
+
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        let library = JSON.parse(localStorage.getItem('flashcardLibrary')) || [];
+        let currentImageSrc = null;
+
+        // --- AUTH & INIT ---
+        function handleClientLoad() {
+            gapi.load('client', async () => {
+                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
+                gapiInited = true;
+                checkAuth();
+            });
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID, scope: SCOPES, callback: ''
+            });
+            gisInited = true;
+            renderLibrary();
+        }
+
+        function checkAuth() {
+            // Apenas verificação visual inicial
+        }
+
+        function handleAuthClick() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error) throw (resp);
+                document.getElementById('auth-indicator').classList.remove('hidden');
+                document.getElementById('auth-indicator').classList.add('flex');
+                document.getElementById('authorize_button').classList.add('hidden');
+            };
+            tokenClient.requestAccessToken({prompt: ''}); // Tenta login silencioso ou popup
+        }
+
+        // --- LÓGICA DO APP ---
+        document.getElementById('input-image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    currentImageSrc = ev.target.result;
+                    const img = document.getElementById('preview-thumb');
+                    img.src = currentImageSrc;
+                    img.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('btn-save').addEventListener('click', () => {
+            const s = document.getElementById('input-subject').value;
+            const c = document.getElementById('input-concept').value;
+            const q = document.getElementById('input-q').value;
+            const a = document.getElementById('input-a').value;
+
+            if(!s || !c || !q || !a) return alert("Preencha todos os campos obrigatórios!");
+
+            const newCard = {
+                id: Date.now(), subject: s, concept: c, question: q, answer: a,
+                image: currentImageSrc, createdAt: new Date().toISOString()
+            };
+            library.unshift(newCard);
+            localStorage.setItem('flashcardLibrary', JSON.stringify(library));
+            renderLibrary();
+            
+            // Limpa campos básicos (UX)
+            document.getElementById('input-concept').value = '';
+            document.getElementById('input-q').value = '';
+            document.getElementById('input-a').value = '';
+        });
+
+        function renderLibrary() {
+            const container = document.getElementById('library-container');
+            if (library.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-slate-400 opacity-60 pt-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                        <p class="font-medium">Sua biblioteca está vazia</p>
+                    </div>`;
+                return;
+            }
+
+            const grouped = library.reduce((acc, card) => {
+                const subj = card.subject.toUpperCase();
+                if (!acc[subj]) acc[subj] = [];
+                acc[subj].push(card);
+                return acc;
+            }, {});
+
+            let html = "";
+            for (const [subject, cards] of Object.entries(grouped)) {
+                html += `
+                    <div class="mb-5 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-50 px-4 py-3 border-b border-slate-100 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition" onclick="toggle('${subject.replace(/\s/g, '_')}')">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-medical-500 text-white text-xs font-bold px-2 py-1 rounded">MATÉRIA</span>
+                                <span class="font-bold text-slate-700">${subject}</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-slate-400 text-sm">
+                                <span>${cards.length} cards</span>
+                                <svg class="w-4 h-4 transform transition-transform" id="icon-${subject.replace(/\s/g, '_')}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                        <div id="sec-${subject.replace(/\s/g, '_')}" class="divide-y divide-slate-100">
+                `;
+                
+                cards.forEach(card => {
+                    html += `
+                        <div class="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-blue-50/50 transition duration-200 group">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h4 class="font-bold text-slate-800 truncate">${card.concept}</h4>
+                                    ${card.image ? '<span class="text-xs text-slate-400" title="Possui imagem">📷</span>' : ''}
+                                </div>
+                                <p class="text-sm text-slate-500 truncate group-hover:text-slate-700 transition">${card.question}</p>
+                            </div>
+                            <div class="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                <button onclick="openPreview(${card.id})" class="text-xs bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg shadow-sm hover:border-medical-500 hover:text-medical-500 font-bold transition flex items-center gap-1">
+                                    Visualizar
+                                </button>
+                                <button onclick="addToGoogleCalendar(${card.id})" class="text-xs bg-green-50 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg shadow-sm hover:bg-green-100 font-bold transition flex items-center gap-1">
+                                    📅 Agendar Revisão
+                                </button>
+                                <button onclick="deleteCard(${card.id})" class="p-1.5 text-slate-300 hover:text-red-500 transition rounded hover:bg-red-50" title="Apagar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+                        </div>`;
+                });
+                html += `</div></div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        window.toggle = (id) => {
+            document.getElementById(`sec-${id}`).classList.toggle('hidden');
+            document.getElementById(`icon-${id}`).classList.toggle('rotate-180');
+        };
+        
+        window.deleteCard = (id) => {
+            if(confirm("Deseja apagar este flashcard permanentemente?")) {
+                library = library.filter(c => c.id !== id);
+                localStorage.setItem('flashcardLibrary', JSON.stringify(library));
+                renderLibrary();
+            }
+        };
+
+        window.clearStorage = () => {
+            if(confirm("ATENÇÃO: Isso apagará toda sua biblioteca. Confirmar?")) {
+                localStorage.removeItem('flashcardLibrary');
+                library = [];
+                renderLibrary();
+            }
+        };
+
+        // --- GOOGLE CALENDAR LOGIC ---
+        async function addToGoogleCalendar(cardId) {
+            if (!gapi.client.getToken()) {
+                alert("Por favor, conecte sua conta Google no topo da página primeiro.");
+                handleAuthClick();
+                return;
+            }
+            const card = library.find(c => c.id === cardId);
+            if (!card) return;
+
+            if(!confirm(`Agendar 8 revisões automáticas para "${card.concept}"?\n(D1, D3, D7, D14, D30, D60, D90, D120)`)) return;
+
+            const intervals = [1, 3, 7, 14, 30, 60, 90, 120];
+            const batch = gapi.client.newBatch();
+            
+            intervals.forEach(days => {
+                const date = new Date();
+                date.setDate(date.getDate() + days);
+                const dateStr = date.toISOString().split('T')[0];
+
+                const event = {
+                    'summary': `Revisão: ${card.subject} - ${card.concept}`,
+                    'description': `Revisão espaçada (Dia ${days}).\n\n[P] ${card.question}\n[R] ${card.answer}`,
+                    'start': { 'date': dateStr },
+                    'end': { 'date': dateStr },
+                    'colorId': '10',
+                    'transparency': 'transparent' // Não bloqueia a agenda
+                };
+                batch.add(gapi.client.calendar.events.insert({ 'calendarId': 'primary', 'resource': event }));
+            });
+
+            try {
+                await batch.then();
+                alert(`Sucesso! 8 revisões agendadas no Google Calendar.`);
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao conectar com Google Calendar. Verifique as permissões.");
+            }
+        }
+
+        // --- RENDER MODAL ---
+        window.openPreview = (id) => {
+            const card = library.find(c => c.id === id);
+            const modal = document.getElementById('modal-preview');
+            const area = document.getElementById('modal-render-area');
+            
+            const fmt = t => t.split(" ").map(w => w.length>4 && Math.random()>0.6 ? `<strong>${w}</strong>`:w).join(" ");
+            const qFmt = fmt(card.question);
+            const aFmt = fmt(card.answer);
+            const imgHTML = card.image ? `<img src="${card.image}" class="flashcard-artwork">` : '';
+
+            // Labels
+            const lSubj = `<div class="aux-text" style="top:5%; left:5%; background:#0ea5e9">${card.subject.toUpperCase()}</div>`;
+            const lConc = `<div class="aux-text" style="top:5%; right:5%">${card.concept.toUpperCase()}</div>`;
+
+            area.innerHTML = `
+                <div class="flex flex-col gap-3">
+                    <h4 class="text-center font-bold text-slate-600">FRENTE</h4>
+                    <div id="pf" class="flashcard-render-container">
+                        <img src="${BG_BASE64}" class="flashcard-bg-img">
+                        ${lSubj}
+                        <div class="flashcard-text-overlay">
+                            <div class="font-flashcard" style="font-size:clamp(1.5rem,8cqi,3rem)">${qFmt}</div>
+                        </div>
+                    </div>
+                    <button onclick="dl('pf','${card.concept}_F')" class="btn-primary text-white py-3 rounded-xl font-bold shadow-lg">Baixar Imagem</button>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <h4 class="text-center font-bold text-slate-600">VERSO</h4>
+                    <div id="pb" class="flashcard-render-container">
+                        <img src="${BG_BASE64}" class="flashcard-bg-img">
+                        ${imgHTML}
+                        ${lConc}
+                        <div class="flashcard-text-overlay" style="justify-content:flex-start;padding-top:20%">
+                            <div class="font-flashcard" style="font-size:clamp(0.8rem,4.8cqi,1.9rem)">${aFmt}</div>
+                        </div>
+                    </div>
+                    <button onclick="dl('pb','${card.concept}_V')" class="btn-primary text-white py-3 rounded-xl font-bold shadow-lg">Baixar Imagem</button>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        };
+
+        window.closeModal = () => document.getElementById('modal-preview').classList.add('hidden');
+        window.dl = (id, name) => {
+            html2canvas(document.getElementById(id), {useCORS:true, scale:2, backgroundColor:null}).then(c => {
+                const a = document.createElement('a'); a.download=name+".png"; a.href=c.toDataURL("image/png"); a.click();
+            });
+        };
+    </script>
+</body>
+</html>
