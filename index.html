@@ -3,188 +3,308 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma Flashcards (Integração Google Calendar)</title>
+    <title>MedCards Pro - Plataforma de Estudos</title>
     
+    <!-- Bibliotecas -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Anton&display=swap" rel="stylesheet">
     
+    <!-- Google API -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
 
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        display: ['Anton', 'sans-serif'],
+                    },
+                    colors: {
+                        medical: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .font-title { font-family: 'Anton', sans-serif; }
+        body { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); min-height: 100vh; }
         
-        /* --- CARD --- */
+        /* CARD STYLES */
         .flashcard-render-container {
             position: relative; width: 100%; aspect-ratio: 1080 / 1450;
-            overflow: hidden; border-radius: 0.5rem; background-color: #333;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            overflow: hidden; border-radius: 1rem; background-color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        .flashcard-bg-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .flashcard-bg-img { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; 
+        }
         .flashcard-artwork {
-            position: absolute; left: 50%; transform: translateX(-50%); bottom: 5%; 
-            width: auto; max-height: 50%; max-width: 80%; 
-            object-fit: contain; z-index: 5; border-radius: 1.5rem; pointer-events: none;
+            position: absolute; left: 50%; transform: translateX(-50%); bottom: 8%; 
+            width: auto; max-height: 45%; max-width: 85%; 
+            object-fit: contain; z-index: 5; border-radius: 1rem; pointer-events: none;
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.2));
         }
         .flashcard-text-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 4%;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 6%;
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
             text-align: center; z-index: 10; 
         }
-        .font-flashcard { font-family: 'Anton', sans-serif; line-height: 1.2; color: white; text-shadow: 2px 2px 0 #000; }
-        #front-card-render .font-flashcard { font-size: clamp(1.5rem, 8cqi, 3rem); }
-        #back-card-render .flashcard-text-overlay { justify-content: flex-start; padding-top: 20%; height: 45%; }
-        #back-card-render .font-flashcard { font-size: clamp(0.8rem, 4.8cqi, 1.9rem); }
+        .font-flashcard { 
+            font-family: 'Anton', sans-serif; line-height: 1.1; color: white; 
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.8);
+        }
+        .font-flashcard strong { color: #facc15; font-weight: normal; } /* Destaque amarelo */
+
+        #front-card-render .font-flashcard { font-size: clamp(2rem, 9cqi, 3.5rem); }
+        #back-card-render .flashcard-text-overlay { justify-content: flex-start; padding-top: 15%; height: 50%; }
+        #back-card-render .font-flashcard { font-size: clamp(1rem, 5cqi, 2rem); }
         
         .aux-text {
-            position: absolute; font-family: 'Inter', sans-serif; font-weight: 600;
-            font-size: clamp(0.6rem, 2cqi, 0.9rem); color: white; background: rgba(0,0,0,0.6);
-            padding: 2px 8px; border-radius: 4px; z-index: 11; text-transform: uppercase;
+            position: absolute; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700;
+            font-size: clamp(0.6rem, 2cqi, 0.8rem); color: white; background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px); padding: 4px 10px; border-radius: 6px; z-index: 11; 
+            text-transform: uppercase; letter-spacing: 0.05em;
         }
 
-        /* --- UI --- */
-        .library-item { transition: all 0.2s; border-left: 4px solid transparent; }
-        .library-item:hover { border-left-color: #2563eb; background-color: #f1f5f9; }
-        
-        .google-btn {
-            background-color: #fff; color: #757575; border: 1px solid #ddd;
-            display: inline-flex; items-center; padding: 8px 16px; border-radius: 4px; font-weight: 600; font-size: 14px;
-            cursor: pointer; transition: background-color .3s;
+        /* UI Elements */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
         }
-        .google-btn:hover { background-color: #f1f1f1; }
-        .google-icon { width: 18px; height: 18px; margin-right: 8px; }
+        .input-field {
+            border: 1px solid #cbd5e1; transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: #0ea5e9; ring: 3px solid rgba(14, 165, 233, 0.15); outline: none;
+        }
+        
+        /* Toggle Switch */
+        .toggle-checkbox:checked { right: 0; border-color: #0ea5e9; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #0ea5e9; }
+        .toggle-checkbox:checked + .toggle-label:before { transform: translateX(100%); }
+        
+        .folder-header:hover { background-color: #f8fafc; }
+        .subfolder-header:hover { background-color: #f1f5f9; }
+        
+        /* Rotate animation */
+        .rotate-90 { transform: rotate(90deg); }
+        .transition-transform { transition: transform 0.2s ease; }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     </style>
 </head>
-<body class="p-4 md:p-8" onload="handleClientLoad()">
+<body class="p-4 md:p-6 pb-20" onload="initGoogleAPI()">
 
-    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        <div class="lg:col-span-5 space-y-6">
-            <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-200 sticky top-4">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                        <span>⚡</span> Criar Card
-                    </h2>
-                    <div id="auth-status" class="text-xs font-bold text-red-500 border border-red-200 bg-red-50 px-2 py-1 rounded">
-                        Google Desconectado
-                    </div>
-                </div>
+    <!-- TOAST -->
+    <div id="toast-container" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[60] pointer-events-none transition-all duration-300 opacity-0 translate-y-[-20px]">
+        <div id="toast-content" class="bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 pointer-events-auto">
+            <span id="toast-icon" class="text-xl">✓</span>
+            <span id="toast-msg" class="font-bold text-sm">Operação realizada!</span>
+        </div>
+    </div>
 
-                <button id="authorize_button" class="w-full mb-6 google-btn justify-center" onclick="handleAuthClick()">
-                    <img class="google-icon" src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"/>
-                    Conectar Google Calendar
-                </button>
+    <!-- MODAL DE CONFIRMAÇÃO (CUSTOM) -->
+    <div id="modal-confirm" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-[70] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full transform scale-100 transition-all">
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Confirmação</h3>
+            <p id="confirm-msg" class="text-slate-600 mb-6 text-sm">Tem certeza que deseja realizar esta ação?</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeConfirm()" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg font-bold text-sm transition">Cancelar</button>
+                <button id="confirm-btn-action" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold text-sm transition shadow-lg shadow-red-500/30">Confirmar</button>
+            </div>
+        </div>
+    </div>
 
-                <div class="grid grid-cols-2 gap-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <div>
-                        <label class="block text-xs font-bold text-blue-800 uppercase mb-1">Matéria</label>
-                        <input type="text" id="input-subject" class="w-full p-2 text-sm border rounded" placeholder="Ex: Cardiologia">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-blue-800 uppercase mb-1">Conceito</label>
-                        <input type="text" id="input-concept" class="w-full p-2 text-sm border rounded" placeholder="Ex: Pericardite">
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Imagem (Upload)</label>
-                    <input type="file" id="input-image" accept="image/*" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-                    <img id="preview-thumb" class="h-20 mt-2 object-contain hidden rounded border" />
-                </div>
-
-                <div class="space-y-3 mb-6">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pergunta (Frente)</label>
-                        <textarea id="input-q" rows="2" class="w-full p-2 border rounded text-sm"></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Resposta (Verso)</label>
-                        <textarea id="input-a" rows="3" class="w-full p-2 border rounded text-sm"></textarea>
-                    </div>
-                </div>
-
-                <button id="btn-save" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow flex items-center justify-center gap-2">
-                    💾 Salvar na Biblioteca
-                </button>
+    <!-- NAVBAR -->
+    <nav class="max-w-7xl mx-auto mb-6 glass-panel rounded-2xl px-6 py-4 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-medical-500 text-white p-2 rounded-lg shadow-lg shadow-medical-500/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-slate-800 tracking-tight">MedCards<span class="text-medical-500">Pro</span></h1>
             </div>
         </div>
 
-        <div class="lg:col-span-7">
-            <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden min-h-[600px]">
-                <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <div>
-                        <h2 class="text-xl font-bold text-slate-800">📚 Minha Biblioteca</h2>
-                        <p class="text-xs text-slate-500">Histórico + Revisão Espaçada Automática</p>
+        <div class="flex items-center gap-3">
+            <div id="auth-status" class="hidden flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-xs font-bold border border-green-200">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Online
+            </div>
+            <button id="auth-btn" class="bg-white border border-slate-300 text-slate-600 px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 hover:bg-slate-50 transition" onclick="handleAuthClick()">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" class="w-4 h-4">
+                Conectar Calendar
+            </button>
+        </div>
+    </nav>
+
+    <!-- GRID LAYOUT -->
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- EDITOR (40%) -->
+        <div class="lg:col-span-5 space-y-6">
+            <div class="glass-panel p-6 rounded-2xl shadow-xl shadow-slate-200/50 sticky top-4">
+                
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2" id="editor-title"><span>⚡</span> Criar Card</h2>
+                    
+                    <!-- TOGGLE AUTO-SYNC -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Auto Agenda</span>
+                        <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input type="checkbox" id="auto-sync-toggle" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="auto-sync-toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer"></label>
+                        </div>
                     </div>
-                    <button onclick="clearStorage()" class="text-xs text-red-500 hover:text-red-700 underline">Limpar</button>
                 </div>
-                <div id="library-container" class="p-6 space-y-6">
-                    <div class="text-center text-slate-400 py-10"><p>Biblioteca vazia.</p></div>
+
+                <!-- Inputs Organização -->
+                <div class="grid grid-cols-2 gap-4 mb-5">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Matéria (Pasta)</label>
+                        <input type="text" id="input-subject" class="input-field w-full p-2.5 rounded-lg bg-slate-50 text-sm font-medium" placeholder="Ex: Cardiologia">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Conceito (Subpasta)</label>
+                        <input type="text" id="input-concept" class="input-field w-full p-2.5 rounded-lg bg-slate-50 text-sm font-medium" placeholder="Ex: IAM">
+                    </div>
+                </div>
+
+                <!-- Upload -->
+                <div class="mb-5 space-y-1">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Imagem Ilustrativa</label>
+                    <label class="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition relative overflow-hidden group">
+                        <div class="flex flex-col items-center justify-center text-slate-400 group-hover:text-medical-500 transition">
+                            <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <p class="text-[10px] uppercase font-bold">Selecionar Arquivo</p>
+                        </div>
+                        <input type="file" id="input-image" accept="image/*" class="hidden" />
+                        <img id="preview-thumb" class="absolute inset-0 w-full h-full object-contain bg-white hidden opacity-90 p-2" />
+                    </label>
+                </div>
+
+                <!-- Perguntas/Respostas -->
+                <div class="space-y-4 mb-6">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Pergunta <span class="text-gray-400 font-normal ml-1">(Use **texto** para negrito)</span></label>
+                        <textarea id="input-q" rows="3" class="input-field w-full p-3 rounded-lg bg-white text-sm font-medium resize-none shadow-sm" placeholder="Ex: O que é **Pericardite**?"></textarea>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Resposta</label>
+                        <textarea id="input-a" rows="5" class="input-field w-full p-3 rounded-lg bg-white text-sm font-medium resize-none shadow-sm" placeholder="Digite a resposta completa..."></textarea>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button id="btn-cancel-edit" class="hidden w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold py-3.5 rounded-xl transition text-sm uppercase" onclick="cancelEdit()">
+                        Cancelar
+                    </button>
+                    <button id="btn-save" class="flex-1 bg-gradient-to-r from-medical-500 to-medical-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-medical-500/30 transition hover:-translate-y-0.5 flex items-center justify-center gap-2 text-sm uppercase tracking-wide transform active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg>
+                        <span id="btn-save-text">Salvar Flashcard</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAINEL DIREITO: BIBLIOTECA (60%) -->
+        <div class="lg:col-span-7 space-y-6">
+            
+            <!-- WIDGET AGENDA -->
+            <div class="glass-panel rounded-2xl shadow-sm overflow-hidden p-6 bg-white/80">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span>📅</span> Próximas Revisões
+                    </h2>
+                    <button onclick="fetchUpcomingEvents()" class="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded text-slate-600 transition font-bold">Atualizar</button>
+                </div>
+                <div id="calendar-widget" class="space-y-2 max-h-40 overflow-y-auto custom-scroll pr-2">
+                    <div class="text-center text-slate-400 text-sm py-4">Conecte o Google Calendar para ver suas revisões aqui.</div>
+                </div>
+            </div>
+
+            <!-- BIBLIOTECA -->
+            <div class="glass-panel rounded-2xl shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[600px]">
+                <div class="p-5 border-b border-slate-200 bg-white/60 backdrop-blur-sm flex flex-col gap-4 sticky top-0 z-20">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span>📚</span> Acervo</h2>
+                            <p class="text-xs text-slate-500">Matéria > Conceito > Cards</p>
+                        </div>
+                        <button onclick="confirmClearStorage()" class="text-xs bg-red-50 text-red-500 hover:bg-red-100 px-3 py-1.5 rounded-lg font-bold transition">Limpar</button>
+                    </div>
+                    <!-- BARRA DE BUSCA -->
+                    <div class="relative">
+                        <input type="text" id="search-input" placeholder="Buscar por matéria, conceito ou texto..." class="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-medical-500 focus:ring-1 focus:ring-medical-500 transition">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                </div>
+                
+                <div id="library-container" class="p-5 space-y-3 flex-1 overflow-y-auto bg-slate-50/30 custom-scroll">
+                    <!-- Cards -->
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="modal-preview" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 relative">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-3xl font-bold text-gray-500">&times;</button>
-            <div id="modal-render-area" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
+    <!-- MODAL DE VISUALIZAÇÃO -->
+    <div id="modal-preview" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md hidden z-[100] flex items-center justify-center p-4 transition-all opacity-0">
+        <div class="bg-white rounded-3xl max-w-6xl w-full h-[90vh] overflow-hidden relative shadow-2xl flex flex-col">
+            <div class="px-8 py-4 border-b border-slate-100 flex justify-between items-center bg-white z-10">
+                <h3 class="text-xl font-bold text-slate-800">Visualização do Flashcard</h3>
+                <button onclick="closeModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full p-2 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-8 bg-slate-50 custom-scroll">
+                <div id="modal-render-area" class="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl mx-auto"></div>
+            </div>
         </div>
     </div>
 
     <script>
-        // ======================================================
-        // CONFIGURAÇÃO DA API GOOGLE - PREENCHA AQUI!
-        // ======================================================
-        const CLIENT_ID = '477548483924-e8aritdjhs9emuu23s67cqa4pcc0kc4j.apps.googleusercontent.com'; // Pegue no Google Cloud Console
-        const API_KEY = 'AIzaSyBCi_WyOv0M6QPiIklXgP4DshN8Y6vWM3s'; // Pegue no Google Cloud Console
+        // === CREDENCIAIS ===
+        const CLIENT_ID = '477548483924-e8aritdjhs9emuu23s67cqa4pcc0kc4j.apps.googleusercontent.com'; 
+        const API_KEY = 'AIzaSyBCi_WyOv0M6QPiIklXgP4DshN8Y6vWM3s'; 
         const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-        const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
-        // ======================================================
+        const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly';
+        // ==================
 
-        const BG_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="; 
-        
+        const BG_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+
         let tokenClient;
         let gapiInited = false;
-        let gisInited = false;
         let library = JSON.parse(localStorage.getItem('flashcardLibrary')) || [];
         let currentImageSrc = null;
+        let editingId = null; // Para controlar o modo edição
 
-        // --- INICIALIZAÇÃO GOOGLE API ---
-        function handleClientLoad() {
-            gapi.load('client', initializeGapiClient);
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID,
-                scope: SCOPES,
-                callback: '', // Definido ao solicitar token
+        // --- INIT ---
+        function initGoogleAPI() {
+            gapi.load('client', async () => {
+                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
+                gapiInited = true;
+                if(gapi.client.getToken()) fetchUpcomingEvents();
             });
-            gisInited = true;
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID, scope: SCOPES, callback: ''
+            });
             renderLibrary();
-        }
-
-        async function initializeGapiClient() {
-            await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
-            gapiInited = true;
-            checkAuth();
-        }
-
-        function checkAuth() {
-            // Apenas verifica se a biblioteca carregou, a autenticação real é no clique
-            if (gapiInited && gisInited) {
-                document.getElementById('authorize_button').classList.remove('opacity-50', 'cursor-not-allowed');
-            }
         }
 
         function handleAuthClick() {
             tokenClient.callback = async (resp) => {
-                if (resp.error !== undefined) throw (resp);
-                document.getElementById('auth-status').textContent = "Google Conectado ✅";
-                document.getElementById('auth-status').className = "text-xs font-bold text-green-600 border border-green-200 bg-green-50 px-2 py-1 rounded";
-                document.getElementById('authorize_button').style.display = 'none';
+                if (resp.error) throw (resp);
+                document.getElementById('auth-btn').innerHTML = "Conectado ✅";
+                document.getElementById('auth-status').classList.remove('hidden');
+                document.getElementById('auth-status').classList.add('flex');
+                fetchUpcomingEvents(); 
             };
-
             if (gapi.client.getToken() === null) {
                 tokenClient.requestAccessToken({prompt: 'consent'});
             } else {
@@ -192,9 +312,55 @@
             }
         }
 
-        // --- LÓGICA DE FLASHCARDS ---
+        // --- UX HELPERS ---
+        function showToast(msg = "Sucesso!", type="success") {
+            const toast = document.getElementById('toast-container');
+            const content = document.getElementById('toast-content');
+            const icon = document.getElementById('toast-icon');
+            const msgEl = document.getElementById('toast-msg');
+            
+            msgEl.textContent = msg;
+            
+            // Estilização baseada no tipo
+            if(type === 'error') {
+                content.classList.remove('bg-slate-800');
+                content.classList.add('bg-red-600');
+                icon.textContent = '⚠️';
+            } else {
+                content.classList.remove('bg-red-600');
+                content.classList.add('bg-slate-800');
+                icon.textContent = '✓';
+            }
 
-        // 1. Upload
+            toast.classList.remove('opacity-0', 'translate-y-[-20px]');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-20px]');
+            }, 3000);
+        }
+
+        function showConfirm(msg, onConfirm) {
+            const modal = document.getElementById('modal-confirm');
+            const msgEl = document.getElementById('confirm-msg');
+            const btn = document.getElementById('confirm-btn-action');
+            
+            msgEl.textContent = msg;
+            modal.classList.remove('hidden');
+            
+            // Remove listeners antigos para evitar duplicação
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', () => {
+                onConfirm();
+                closeConfirm();
+            });
+        }
+
+        function closeConfirm() {
+            document.getElementById('modal-confirm').classList.add('hidden');
+        }
+
+        // --- LÓGICA FLASHCARDS ---
         document.getElementById('input-image').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -208,123 +374,285 @@
             }
         });
 
-        // 2. Salvar Card
-        document.getElementById('btn-save').addEventListener('click', () => {
+        // Search Filter
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = library.filter(card => 
+                card.subject.toLowerCase().includes(term) || 
+                card.concept.toLowerCase().includes(term) ||
+                card.question.toLowerCase().includes(term) ||
+                card.answer.toLowerCase().includes(term)
+            );
+            renderLibrary(filtered);
+        });
+
+        document.getElementById('btn-save').addEventListener('click', async () => {
             const s = document.getElementById('input-subject').value;
             const c = document.getElementById('input-concept').value;
             const q = document.getElementById('input-q').value;
             const a = document.getElementById('input-a').value;
+            const autoSync = document.getElementById('auto-sync-toggle').checked;
 
-            if(!s || !c || !q || !a) return alert("Preencha tudo!");
+            if(!s || !c || !q || !a) return showToast("Preencha todos os campos!", "error");
 
-            const newCard = {
-                id: Date.now(), subject: s, concept: c, question: q, answer: a,
-                image: currentImageSrc, createdAt: new Date().toISOString()
-            };
-            library.unshift(newCard);
+            if (editingId) {
+                // Atualizar card existente
+                const index = library.findIndex(card => card.id === editingId);
+                if (index !== -1) {
+                    library[index] = {
+                        ...library[index],
+                        subject: s, concept: c, question: q, answer: a,
+                        image: currentImageSrc || library[index].image // Mantém imagem antiga se não mudou
+                    };
+                    showToast("Flashcard atualizado!");
+                    cancelEdit(); // Sai do modo edição
+                }
+            } else {
+                // Criar novo card
+                const newCard = {
+                    id: Date.now(), subject: s, concept: c, question: q, answer: a,
+                    image: currentImageSrc, createdAt: new Date().toISOString()
+                };
+                library.unshift(newCard);
+                showToast("Flashcard criado!");
+                
+                // Auto Sync apenas na criação
+                if(autoSync) {
+                    if(gapi.client.getToken()) await addToGoogleCalendar(newCard.id, true);
+                    else showToast("Conecte o Calendar para sync automático", "error");
+                }
+            }
+
             localStorage.setItem('flashcardLibrary', JSON.stringify(library));
             renderLibrary();
+            
+            // Limpa se não estiver editando
+            if (!editingId) {
+                document.getElementById('input-q').value = '';
+                document.getElementById('input-a').value = '';
+            }
         });
 
-        // 3. Renderizar Lista
-        function renderLibrary() {
-            const container = document.getElementById('library-container');
-            if (library.length === 0) { container.innerHTML = '<p class="text-center text-gray-400">Vazio</p>'; return; }
+        // --- MODO EDIÇÃO ---
+        window.editCard = (id) => {
+            const card = library.find(c => c.id === id);
+            if(!card) return;
 
-            const grouped = library.reduce((acc, card) => {
-                const subj = card.subject.toUpperCase();
-                if (!acc[subj]) acc[subj] = [];
-                acc[subj].push(card);
-                return acc;
-            }, {});
+            // Preenche campos
+            document.getElementById('input-subject').value = card.subject;
+            document.getElementById('input-concept').value = card.concept;
+            document.getElementById('input-q').value = card.question;
+            document.getElementById('input-a').value = card.answer;
+            
+            // Configura estado
+            editingId = id;
+            currentImageSrc = card.image;
+            
+            if(card.image) {
+                document.getElementById('preview-thumb').src = card.image;
+                document.getElementById('preview-thumb').classList.remove('hidden');
+            } else {
+                document.getElementById('preview-thumb').classList.add('hidden');
+            }
+
+            // UI Changes
+            document.getElementById('editor-title').innerHTML = `<span>✏️</span> Editando Card`;
+            document.getElementById('btn-save-text').textContent = "Atualizar Card";
+            document.getElementById('btn-save').classList.remove('from-medical-500', 'to-medical-600');
+            document.getElementById('btn-save').classList.add('from-amber-500', 'to-amber-600'); // Cor laranja para edição
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.cancelEdit = () => {
+            editingId = null;
+            currentImageSrc = null;
+            
+            // Limpa/Reseta campos
+            document.getElementById('input-subject').value = '';
+            document.getElementById('input-concept').value = '';
+            document.getElementById('input-q').value = '';
+            document.getElementById('input-a').value = '';
+            document.getElementById('preview-thumb').classList.add('hidden');
+            document.getElementById('input-image').value = '';
+
+            // UI Reset
+            document.getElementById('editor-title').innerHTML = `<span>⚡</span> Criar Novo Card`;
+            document.getElementById('btn-save-text').textContent = "Salvar Flashcard";
+            document.getElementById('btn-save').classList.add('from-medical-500', 'to-medical-600');
+            document.getElementById('btn-save').classList.remove('from-amber-500', 'to-amber-600');
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+        };
+
+        // --- RENDER BIBLIOTECA ---
+        function renderLibrary(dataSet = library) {
+            const container = document.getElementById('library-container');
+            if (dataSet.length === 0) {
+                container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-400 opacity-60"><p>Nenhum card encontrado</p></div>`;
+                return;
+            }
+
+            const tree = {};
+            dataSet.forEach(card => {
+                const s = card.subject.toUpperCase();
+                const c = card.concept.toUpperCase();
+                if (!tree[s]) tree[s] = {};
+                if (!tree[s][c]) tree[s][c] = [];
+                tree[s][c].push(card);
+            });
 
             let html = "";
-            for (const [subject, cards] of Object.entries(grouped)) {
-                html += `<div class="mb-4 border rounded overflow-hidden">
-                    <div class="bg-slate-100 p-3 font-bold cursor-pointer" onclick="toggle('${subject.replace(/\s/g, '_')}')">📂 ${subject} (${cards.length})</div>
-                    <div id="sec-${subject.replace(/\s/g, '_')}" class="bg-white">`;
-                
-                cards.forEach(card => {
-                    html += `
-                        <div class="p-4 border-b flex justify-between items-center gap-4">
-                            <div><h4 class="font-bold">${card.concept}</h4><p class="text-xs text-gray-500 truncate w-40">${card.question}</p></div>
-                            <div class="flex gap-2">
-                                <button onclick="openPreview(${card.id})" class="text-xs border px-2 py-1 rounded hover:bg-gray-100">👁️ Ver</button>
-                                <button onclick="addToGoogleCalendar(${card.id})" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 font-bold flex items-center gap-1">
-                                    📅 Add Agenda
-                                </button>
-                                <button onclick="deleteCard(${card.id})" class="text-xs text-red-500 font-bold px-2">✕</button>
+            for (const [subject, concepts] of Object.entries(tree)) {
+                html += `
+                    <div class="mb-4 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="folder-header bg-slate-50 px-4 py-3 border-b border-slate-100 flex justify-between items-center cursor-pointer" onclick="toggle('${subject.replace(/\s/g,'_')}')">
+                            <div class="flex items-center gap-3">
+                                <span class="bg-amber-100 text-amber-600 p-1.5 rounded-lg border border-amber-200">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>
+                                </span>
+                                <span class="font-bold text-slate-700">${subject}</span>
                             </div>
-                        </div>`;
-                });
+                            <svg class="folder-icon w-5 h-5 text-slate-400 transition-transform" id="icon-${subject.replace(/\s/g,'_')}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                        </div>
+                        <div id="sec-${subject.replace(/\s/g,'_')}" class="hidden bg-slate-50/50 p-2 space-y-2">
+                `;
+
+                for (const [concept, cards] of Object.entries(concepts)) {
+                    html += `
+                        <div class="subfolder ml-4 border-l-2 border-slate-200 pl-4">
+                            <div class="subfolder-header flex justify-between items-center py-2 px-2 rounded cursor-pointer hover:bg-slate-100" onclick="toggleSub('${subject.replace(/\s/g,'_')}-${concept.replace(/\s/g,'_')}')">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-medical-500"></span>
+                                    <span class="font-semibold text-slate-600 text-sm">${concept}</span>
+                                    <span class="text-[10px] bg-slate-200 px-1.5 rounded text-slate-500">${cards.length}</span>
+                                </div>
+                                <svg class="folder-icon w-4 h-4 text-slate-400 transition-transform" id="icon-sub-${subject.replace(/\s/g,'_')}-${concept.replace(/\s/g,'_')}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                            </div>
+                            
+                            <div id="sub-${subject.replace(/\s/g,'_')}-${concept.replace(/\s/g,'_')}" class="hidden space-y-2 mt-2">
+                                ${cards.map(card => `
+                                    <div class="bg-white p-3 rounded-lg border border-slate-200 hover:shadow-md transition flex justify-between items-center group">
+                                        <p class="text-xs text-slate-500 truncate w-40 md:w-64 font-medium">${card.question}</p>
+                                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                                            <button onclick="editCard(${card.id})" class="text-[10px] bg-amber-50 text-amber-600 px-2 py-1 rounded hover:bg-amber-100 font-bold" title="Editar">✏️</button>
+                                            <button onclick="openPreview(${card.id})" class="text-[10px] bg-slate-100 px-2 py-1 rounded hover:bg-slate-200 font-bold">Ver</button>
+                                            <button onclick="addToGoogleCalendar(${card.id})" class="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded hover:bg-green-100 font-bold" title="Agendar">📅</button>
+                                            <button onclick="deleteCard(${card.id})" class="text-red-400 hover:text-red-600">✕</button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
                 html += `</div></div>`;
             }
             container.innerHTML = html;
         }
 
-        window.toggle = (id) => document.getElementById(`sec-${id}`).classList.toggle('hidden');
+        window.toggle = (id) => {
+            document.getElementById(`sec-${id}`).classList.toggle('hidden');
+            document.getElementById(`icon-${id}`).classList.toggle('rotate-90');
+        };
+
+        window.toggleSub = (id) => {
+            document.getElementById(`sub-${id}`).classList.toggle('hidden');
+            document.getElementById(`icon-sub-${id}`).classList.toggle('rotate-180');
+        };
+
         window.deleteCard = (id) => {
-            if(confirm("Apagar?")) {
+            showConfirm("Deseja apagar este card permanentemente?", () => {
                 library = library.filter(c => c.id !== id);
                 localStorage.setItem('flashcardLibrary', JSON.stringify(library));
                 renderLibrary();
-            }
+                showToast("Card apagado.", "success");
+            });
+        };
+        window.confirmClearStorage = () => {
+            showConfirm("Isso apagará TODA sua biblioteca. Continuar?", () => {
+                localStorage.removeItem('flashcardLibrary');
+                library = [];
+                renderLibrary();
+                showToast("Biblioteca limpa.", "success");
+            });
         };
 
-        // --- INTEGRAÇÃO GOOGLE CALENDAR ---
-        async function addToGoogleCalendar(cardId) {
-            // Verifica Login
-            if (!gapi.client.getToken()) {
-                alert("Por favor, clique em 'Conectar Google Calendar' no topo primeiro!");
-                handleAuthClick();
-                return;
-            }
+        // --- WIDGET CALENDAR ---
+        async function fetchUpcomingEvents() {
+            if (!gapi.client.getToken()) return;
+            const widget = document.getElementById('calendar-widget');
+            widget.innerHTML = `<div class="flex justify-center"><div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div></div>`;
 
+            try {
+                const response = await gapi.client.calendar.events.list({
+                    'calendarId': 'primary', 'timeMin': (new Date()).toISOString(), 'showDeleted': false,
+                    'singleEvents': true, 'maxResults': 5, 'orderBy': 'startTime', 'q': 'Rev'
+                });
+                const events = response.result.items;
+                if (events.length > 0) {
+                    widget.innerHTML = events.map(event => {
+                        const date = new Date(event.start.dateTime || event.start.date);
+                        return `
+                            <div class="flex items-center gap-3 p-2 bg-slate-50 rounded border border-slate-100 text-sm">
+                                <div class="bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold text-xs text-center leading-tight">
+                                    ${date.getDate()}<br><span class="text-[8px]">${date.toLocaleString('default',{month:'short'})}</span>
+                                </div>
+                                <div class="truncate flex-1 font-medium text-slate-700">${event.summary}</div>
+                            </div>`;
+                    }).join('');
+                } else {
+                    widget.innerHTML = `<div class="text-center text-slate-400 text-xs py-2">Nenhuma revisão próxima.</div>`;
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        // --- CALENDAR ADD ---
+        async function addToGoogleCalendar(cardId, silent = false) {
+            if (!gapi.client.getToken()) { if(!silent) alert("Conecte o Google Calendar."); return; }
             const card = library.find(c => c.id === cardId);
             if (!card) return;
 
-            if(!confirm(`Deseja adicionar 8 eventos de revisão para "${card.concept}" no seu Google Calendar?`)) return;
+            // Se for silencioso (auto-sync), não pede confirmação
+            if(!silent) {
+                // Wrap confirm in promise to use custom modal logic or plain confirm
+                // For simplicity here, sticking to native confirm inside async flow, 
+                // or we could refactor to use the custom modal which is callback based.
+                // Keeping native confirm for simplicity in this specific flow to avoid callback hell in single file
+                if(!confirm(`Agendar 8 revisões para "${card.concept}"?`)) return; 
+            }
 
-            // Esquema de Repetição
+            let colorId = '9'; 
+            const mat = card.subject.toLowerCase();
+            if (mat.includes('cardio') || mat.includes('urg')) colorId = '11'; 
+            else if (mat.includes('neuro')) colorId = '3'; 
+            else if (mat.includes('pediatria')) colorId = '5';
+            else if (mat.includes('gineco')) colorId = '4';
+
             const intervals = [1, 3, 7, 14, 30, 60, 90, 120];
             const batch = gapi.client.newBatch();
             
             intervals.forEach(days => {
-                const eventDate = new Date();
-                eventDate.setDate(eventDate.getDate() + days);
-                const dateStr = eventDate.toISOString().split('T')[0]; // YYYY-MM-DD
-
-                const event = {
-                    'summary': `Revisão: ${card.subject} - ${card.concept} (Dia ${days})`,
-                    'description': `Pergunta: ${card.question}\n\nResposta: ${card.answer}`,
-                    'start': { 'date': dateStr },
-                    'end': { 'date': dateStr },
-                    'reminders': {
-                        'useDefault': false,
-                        'overrides': [
-                          {'method': 'popup', 'minutes': 540} // Notifica as 9:00 AM (9 * 60)
-                        ]
-                    },
-                    'colorId': '10' // Verde (Basil)
-                };
-
-                // Adiciona ao Batch (Lote)
-                const request = gapi.client.calendar.events.insert({
-                    'calendarId': 'primary',
-                    'resource': event
-                });
-                batch.add(request);
+                const date = new Date(); date.setDate(date.getDate() + days);
+                const dateStr = date.toISOString().split('T')[0];
+                batch.add(gapi.client.calendar.events.insert({ 
+                    'calendarId': 'primary', 
+                    'resource': {
+                        'summary': `🧠 Rev: ${card.concept}`,
+                        'description': `[P] ${card.question}\n[R] ${card.answer}`,
+                        'start': { 'date': dateStr }, 'end': { 'date': dateStr },
+                        'colorId': colorId, 'transparency': 'transparent',
+                        'reminders': { 'useDefault': false, 'overrides': [{'method': 'popup', 'minutes': 540}] }
+                    }
+                }));
             });
 
             try {
-                // Envia todos de uma vez
-                const response = await batch.then();
-                console.log(response);
-                alert(`Sucesso! 8 revisões agendadas para ${card.concept}.`);
-            } catch (err) {
-                console.error("Erro ao adicionar eventos", err);
-                alert("Erro ao acessar o Google Calendar. Verifique o console (F12).");
-            }
+                await batch.then();
+                if(!silent) showToast("Revisões agendadas!", "success");
+                fetchUpcomingEvents();
+            } catch (err) { console.error(err); if(!silent) showToast("Erro no Calendar", "error"); }
         }
 
         // --- PREVIEW ---
@@ -332,20 +660,51 @@
             const card = library.find(c => c.id === id);
             const modal = document.getElementById('modal-preview');
             const area = document.getElementById('modal-render-area');
-            const fmt = t => t.split(" ").map(w => w.length>4 && Math.random()>0.6 ? `<strong>${w}</strong>`:w).join(" ");
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+
+            // Parser de Negrito (**texto**)
+            const fmt = (t) => t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
             
             const qFmt = fmt(card.question);
             const aFmt = fmt(card.answer);
             const imgHTML = card.image ? `<img src="${card.image}" class="flashcard-artwork">` : '';
+            const lSubj = `<div class="aux-text" style="top:5%; left:5%; background:#0ea5e9">${card.subject.toUpperCase()}</div>`;
+            const lConc = `<div class="aux-text" style="top:5%; right:5%">${card.concept.toUpperCase()}</div>`;
 
             area.innerHTML = `
-                <div><h4 class="text-center font-bold">FRENTE</h4><div id="pf" class="flashcard-render-container"><img src="${BG_BASE64}" class="flashcard-bg-img"><div class="flashcard-text-overlay"><div class="font-flashcard" style="font-size:3rem">${qFmt}</div></div></div><button onclick="dl('pf','${card.concept}_F')" class="w-full mt-2 bg-slate-800 text-white py-2 rounded">Baixar</button></div>
-                <div><h4 class="text-center font-bold">VERSO</h4><div id="pb" class="flashcard-render-container"><img src="${BG_BASE64}" class="flashcard-bg-img">${imgHTML}<div class="flashcard-text-overlay" style="justify-content:flex-start;padding-top:20%"><div class="font-flashcard" style="font-size:1.5rem">${aFmt}</div></div></div><button onclick="dl('pb','${card.concept}_V')" class="w-full mt-2 bg-slate-800 text-white py-2 rounded">Baixar</button></div>
+                <div class="flex flex-col gap-4">
+                    <div class="text-center font-bold text-slate-500 uppercase tracking-widest text-sm">Frente</div>
+                    <div id="pf" class="flashcard-render-container shadow-2xl">
+                        <img src="${BG_BASE64}" class="flashcard-bg-img">
+                        ${lSubj}
+                        <div class="flashcard-text-overlay">
+                            <div class="font-flashcard" style="font-size:clamp(2rem,9cqi,3.5rem)">${qFmt}</div>
+                        </div>
+                    </div>
+                    <button onclick="dl('pf','${card.concept}_F')" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-900 transition flex items-center justify-center gap-2">⬇ Baixar</button>
+                </div>
+                <div class="flex flex-col gap-4">
+                    <div class="text-center font-bold text-slate-500 uppercase tracking-widest text-sm">Verso</div>
+                    <div id="pb" class="flashcard-render-container shadow-2xl">
+                        <img src="${BG_BASE64}" class="flashcard-bg-img">
+                        ${imgHTML}
+                        ${lConc}
+                        <div class="flashcard-text-overlay" style="justify-content:flex-start;padding-top:20%">
+                            <div class="font-flashcard" style="font-size:clamp(1rem,5cqi,2rem)">${aFmt}</div>
+                        </div>
+                    </div>
+                    <button onclick="dl('pb','${card.concept}_V')" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-900 transition flex items-center justify-center gap-2">⬇ Baixar</button>
+                </div>
             `;
-            modal.classList.remove('hidden');
         };
 
-        window.closeModal = () => document.getElementById('modal-preview').classList.add('hidden');
+        window.closeModal = () => {
+            const modal = document.getElementById('modal-preview');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        };
+
         window.dl = (id, name) => {
             html2canvas(document.getElementById(id), {useCORS:true, scale:2, backgroundColor:null}).then(c => {
                 const a = document.createElement('a'); a.download=name+".png"; a.href=c.toDataURL("image/png"); a.click();
