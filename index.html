@@ -1,810 +1,356 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedCards Pro - Plataforma de Estudos</title>
-    
-    <!-- Bibliotecas -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Anton&display=swap" rel="stylesheet">
-    
-    <!-- Google API -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-                        display: ['Anton', 'sans-serif'],
-                    },
-                    colors: {
-                        medical: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
-                        brand: { 500: '#6366f1', 600: '#4f46e5' }
-                    },
-                    boxShadow: {
-                        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
-                    }
-                }
-            }
-        }
-    </script>
-
+    <title>Central de Testes Beta - Medicina JVS</title>
     <style>
-        body { 
-            background: radial-gradient(circle at top left, #f1f5f9, #e2e8f0); 
-            min-height: 100vh; 
-        }
-        
-        /* CARD STYLES */
-        .flashcard-render-container {
-            position: relative; width: 100%; aspect-ratio: 1080 / 1450;
-            overflow: hidden; border-radius: 1rem; background-color: #ffffff;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        .flashcard-bg-img { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; 
-        }
-        .flashcard-artwork {
-            position: absolute; left: 50%; transform: translateX(-50%); bottom: 8%; 
-            width: auto; max-height: 45%; max-width: 85%; 
-            object-fit: contain; z-index: 5; border-radius: 1rem; pointer-events: none;
-            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.2));
-        }
-        .flashcard-text-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 6%;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            text-align: center; z-index: 10; 
-        }
-        .font-flashcard { 
-            font-family: 'Anton', sans-serif; line-height: 1.1; color: white; 
-            text-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.8);
-        }
-        .font-flashcard strong { color: #facc15; font-weight: normal; }
-
-        #front-card-render .font-flashcard { font-size: clamp(2rem, 9cqi, 3.5rem); }
-        #back-card-render .flashcard-text-overlay { justify-content: flex-start; padding-top: 15%; height: 50%; }
-        #back-card-render .font-flashcard { font-size: clamp(1rem, 5cqi, 2rem); }
-        
-        .aux-text {
-            position: absolute; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700;
-            font-size: clamp(0.6rem, 2cqi, 0.8rem); color: white; background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px); padding: 4px 10px; border-radius: 6px; z-index: 11; 
-            text-transform: uppercase; letter-spacing: 0.05em;
+        /* --- RESET E VARIÁVEIS --- */
+        :root {
+            --primary: #203b82;
+            --primary-dark: #16295c;
+            --success: #10b981;
+            --success-dark: #059669;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e2e8f0;
+            --star-active: #fbbf24;
+            --star-inactive: #e5e7eb;
         }
 
-        /* UI Elements */
-        .glass-header {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
-        }
-        
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+            color: var(--text-main);
         }
 
-        .input-field {
-            border: 1px solid #cbd5e1; transition: all 0.2s; background: rgba(255,255,255,0.8);
+        /* --- LAYOUT DOS CARDS --- */
+        .card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            border: 1px solid var(--border);
+            display: none; /* Oculta todos por padrão */
+            animation: slideUp 0.4s ease-out forwards;
         }
-        .input-field:focus {
-            border-color: #0ea5e9; ring: 3px solid rgba(14, 165, 233, 0.15); outline: none; background: white;
-        }
-        
-        .toggle-checkbox:checked { right: 0; border-color: #0ea5e9; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #0ea5e9; }
-        .toggle-checkbox:checked + .toggle-label:before { transform: translateX(100%); }
-        
-        .folder-header:hover { background-color: #f8fafc; }
-        .subfolder-header:hover { background-color: #f1f5f9; }
-        .rotate-90 { transform: rotate(90deg); }
-        .transition-transform { transition: transform 0.2s ease; }
 
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .card.active { display: block; }
 
-        .calendar-day {
-            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-            border-radius: 50%; font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
-            position: relative;
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .calendar-day:hover { background-color: #f1f5f9; font-weight: bold; color: #0ea5e9; }
-        .calendar-day.today { background-color: #0ea5e9; color: white; font-weight: bold; box-shadow: 0 4px 6px rgba(14, 165, 233, 0.3); }
-        .calendar-day.has-event::after {
-            content: ''; position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
-            width: 5px; height: 5px; background-color: #f59e0b; border-radius: 50%;
+
+        /* --- TIPOGRAFIA E ELEMENTOS --- */
+        h1, h2 { font-weight: 900; margin-bottom: 0.5rem; color: var(--text-main); }
+        h1 { font-size: 1.875rem; }
+        h2 { font-size: 1.5rem; }
+        p { color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem; }
+
+        .mission-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
         }
-        .calendar-day.today.has-event::after { background-color: white; }
-        .calendar-day.empty { cursor: default; pointer-events: none; }
+
+        .mission-box strong { color: #1e3a8a; display: block; margin-bottom: 0.25rem; }
+
+        /* --- INPUTS E BOTOES --- */
+        input[type="text"], textarea {
+            width: 100%; padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            background: #f9fafb; outline: none;
+            transition: all 0.2s;
+            font-size: 1rem; margin-bottom: 1.5rem;
+        }
+        textarea { height: 120px; resize: none; }
+        input:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(32, 59, 130, 0.2); }
+
+        button {
+            width: 100%; padding: 0.875rem;
+            border: none; border-radius: 0.75rem;
+            font-weight: bold; font-size: 1rem;
+            cursor: pointer; transition: all 0.2s;
+            display: flex; justify-content: center; align-items: center; gap: 0.5rem;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: scale(1.02); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: var(--success-dark); transform: scale(1.02); }
+
+        .btn-secondary { background: transparent; color: var(--text-muted); width: auto; padding: 0.875rem 1.5rem; }
+        .btn-secondary:hover { background: #f3f4f6; color: var(--text-main); }
+
+        .button-group { display: flex; gap: 1rem; }
+
+        /* --- ESTRELAS (RATING) --- */
+        .stars { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .star {
+            width: 40px; height: 40px; cursor: pointer;
+            fill: var(--star-inactive); transition: transform 0.2s, fill 0.2s;
+        }
+        .star:hover { transform: scale(1.1); }
+        .star.active { fill: var(--star-active); }
+
+        /* --- PROGRESS BAR --- */
+        .progress-container { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+        .progress-dot { height: 6px; flex: 1; border-radius: 3px; background: var(--border); transition: 0.3s; }
+        .progress-dot.active { background: var(--primary); }
+
+        /* Icones SVG (inline) */
+        .icon { width: 24px; height: 24px; }
+        .icon-large { width: 64px; height: 64px; margin-bottom: 1rem; color: var(--primary); }
     </style>
 </head>
-<body class="pb-20 text-slate-800" onload="initGoogleAPI()">
+<body>
 
-    <!-- TOAST -->
-    <div id="toast-container" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[60] pointer-events-none transition-all duration-300 opacity-0 translate-y-[-20px]">
-        <div id="toast-content" class="bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 pointer-events-auto">
-            <span id="toast-icon" class="text-xl">✓</span>
-            <span id="toast-msg" class="font-bold text-sm">Operação realizada!</span>
+    <div id="step-0" class="card active">
+        <svg class="icon-large" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+        <h1>Central de Testes Beta</h1>
+        <p>Bem-vindo(a)! Separamos 4 missões rápidas para você testar a nossa plataforma. Sua opinião vai ajudar a construirmos o sistema perfeito.</p>
+        
+        <label style="font-weight: bold; display: block; margin-bottom: 0.5rem;">Seu Nome / Apelido</label>
+        <input type="text" id="input-nome" placeholder="Como devemos te chamar?" oninput="checkName()">
+        
+        <button id="btn-iniciar" class="btn-primary" disabled onclick="nextStep(1)">
+            Iniciar Missões de Teste
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+        </button>
+    </div>
+
+    <div id="step-1" class="card">
+        <div class="progress-container"><div class="progress-dot active"></div><div class="progress-dot"></div><div class="progress-dot"></div><div class="progress-dot"></div></div>
+        <h2>1. Fórum de Dúvidas</h2>
+        <div class="mission-box">
+            <strong>Seu objetivo:</strong>
+            Teste a criação de comentários, responda a um comentário para ver o aninhamento e teste o botão de "Útil".
+        </div>
+        <label style="font-weight: bold; display: block; margin-bottom: 1rem; text-align: center;">Como avalia o fórum?</label>
+        <div class="stars" id="stars-forum">
+            <svg class="star" onclick="setRating('forum', 1)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('forum', 2)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('forum', 3)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('forum', 4)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('forum', 5)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <textarea id="obs-forum" placeholder="Deixe um comentário sobre essa funcionalidade..."></textarea>
+        <div class="button-group">
+            <button class="btn-secondary" onclick="nextStep(0)">Voltar</button>
+            <button class="btn-primary" id="btn-next-1" disabled onclick="nextStep(2)">Próxima Missão</button>
         </div>
     </div>
 
-    <!-- MODAL CONFIRM -->
-    <div id="modal-confirm" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-[70] flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full transform scale-100 transition-all">
-            <h3 class="text-lg font-bold text-slate-800 mb-2">Confirmação</h3>
-            <p id="confirm-msg" class="text-slate-600 mb-6 text-sm">Tem certeza que deseja realizar esta ação?</p>
-            <div class="flex justify-end gap-3">
-                <button onclick="closeConfirm()" class="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg font-bold text-sm transition">Cancelar</button>
-                <button id="confirm-btn-action" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold text-sm transition shadow-lg shadow-red-500/30">Confirmar</button>
-            </div>
+    <div id="step-2" class="card">
+        <div class="progress-container"><div class="progress-dot active"></div><div class="progress-dot active"></div><div class="progress-dot"></div><div class="progress-dot"></div></div>
+        <h2>2. Gerador de PDF</h2>
+        <div class="mission-box">
+            <strong>Seu objetivo:</strong>
+            Selecione algumas questões clicando na impressora em cada card e gere o PDF no botão superior. Verifique o layout.
+        </div>
+        <label style="font-weight: bold; display: block; margin-bottom: 1rem; text-align: center;">O PDF ficou bom?</label>
+        <div class="stars" id="stars-pdf">
+            <svg class="star" onclick="setRating('pdf', 1)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('pdf', 2)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('pdf', 3)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('pdf', 4)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('pdf', 5)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <textarea id="obs-pdf" placeholder="Algo cortou? Achou lento?"></textarea>
+        <div class="button-group">
+            <button class="btn-secondary" onclick="nextStep(1)">Voltar</button>
+            <button class="btn-primary" id="btn-next-2" disabled onclick="nextStep(3)">Próxima Missão</button>
         </div>
     </div>
 
-    <!-- HEADER -->
-    <nav class="glass-header sticky top-0 z-40 mb-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <div class="flex items-center gap-3">
-                    <div class="bg-gradient-to-br from-medical-500 to-medical-600 text-white p-2.5 rounded-xl shadow-lg shadow-medical-500/20 transform hover:scale-105 transition-transform duration-300">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold tracking-tight text-slate-800">MedCards<span class="text-transparent bg-clip-text bg-gradient-to-r from-medical-500 to-medical-900">Pro</span></h1>
-                        <p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Estudo Inteligente</p>
-                    </div>
-                </div>
-                <div>
-                    <button id="auth-btn" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-3 transition-all shadow-sm hover:shadow-md" onclick="handleAuthClick()">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" class="w-5 h-5"> <span>Conectar com Google</span>
-                    </button>
-                    <div id="user-profile" class="hidden items-center gap-4 bg-white/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-                        <img id="user-avatar" src="" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-white shadow-sm">
-                        <div class="hidden md:block">
-                            <p id="user-name" class="text-sm font-bold text-slate-800 leading-none">Usuário</p>
-                            <div class="flex items-center gap-1.5 mt-1">
-                                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                <p class="text-[10px] font-bold text-green-600 uppercase tracking-wide">Calendar Ativo</p>
-                            </div>
-                        </div>
-                        <button onclick="handleSignOut()" class="ml-2 text-slate-400 hover:text-red-500 transition p-1 rounded-lg hover:bg-red-50" title="Sair">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <div id="step-3" class="card">
+        <div class="progress-container"><div class="progress-dot active"></div><div class="progress-dot active"></div><div class="progress-dot active"></div><div class="progress-dot"></div></div>
+        <h2>3. Motor de Questões</h2>
+        <div class="mission-box">
+            <strong>Seu objetivo:</strong>
+            Navegue pelo carrossel, marque questões para revisão, risque alternativas que julga erradas (ícone do olho) e teste o timer.
         </div>
-    </nav>
-
-    <!-- MAIN CONTENT - ROW 1 (Editor e Biblioteca Lado a Lado) -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            <!-- EDITOR -->
-            <div class="glass-panel p-6 rounded-3xl shadow-xl shadow-slate-200/50">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2" id="editor-title">
-                        <span class="bg-blue-100 text-blue-600 p-1.5 rounded-lg">⚡</span> Criar Card
-                    </h2>
-                    <div class="flex items-center gap-3 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase">Auto Agenda</span>
-                        <div class="relative inline-block w-9 align-middle select-none">
-                            <input type="checkbox" id="auto-sync-toggle" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300"/>
-                            <label for="auto-sync-toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer transition-colors duration-300"></label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4 mb-5">
-                    <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Matéria</label>
-                        <input type="text" id="input-subject" class="input-field w-full p-3 rounded-xl text-sm font-semibold text-slate-700 placeholder:font-normal" placeholder="Ex: Cardiologia">
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Conceito</label>
-                        <input type="text" id="input-concept" class="input-field w-full p-3 rounded-xl text-sm font-semibold text-slate-700 placeholder:font-normal" placeholder="Ex: IAM">
-                    </div>
-                </div>
-
-                <div class="mb-5 space-y-1.5">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Imagem Ilustrativa</label>
-                    <label class="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer bg-slate-50/50 hover:bg-slate-100/80 transition-all relative overflow-hidden group">
-                        <div class="flex flex-col items-center justify-center text-slate-400 group-hover:text-medical-500 transition">
-                            <svg class="w-8 h-8 mb-2 opacity-50 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            <p class="text-[10px] uppercase font-bold tracking-wide">Clique para selecionar</p>
-                        </div>
-                        <input type="file" id="input-image" accept="image/*" class="hidden" />
-                        <img id="preview-thumb" class="absolute inset-0 w-full h-full object-contain bg-white hidden opacity-90 p-2" />
-                    </label>
-                </div>
-
-                <div class="space-y-5 mb-8">
-                    <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Pergunta <span class="text-slate-300 font-normal ml-1">(Use **texto** para destaque)</span></label>
-                        <textarea id="input-q" rows="3" class="input-field w-full p-3 rounded-xl bg-white text-sm font-medium resize-none shadow-sm" placeholder="Ex: O que é **Pericardite**?"></textarea>
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Resposta</label>
-                        <textarea id="input-a" rows="5" class="input-field w-full p-3 rounded-xl bg-white text-sm font-medium resize-none shadow-sm" placeholder="Digite a resposta completa..."></textarea>
-                    </div>
-                </div>
-
-                <div class="flex gap-3">
-                    <button id="btn-cancel-edit" class="hidden w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3.5 rounded-xl transition text-xs uppercase tracking-wide" onclick="cancelEdit()">Cancelar</button>
-                    <button id="btn-save" class="flex-1 bg-gradient-to-r from-medical-500 to-medical-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-medical-500/30 transition-all hover:-translate-y-0.5 hover:shadow-medical-500/40 flex items-center justify-center gap-2 text-sm uppercase tracking-wide transform active:scale-95">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" /></svg>
-                        <span id="btn-save-text">Salvar Flashcard</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- BIBLIOTECA -->
-            <div class="glass-panel rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[700px]">
-                <div class="p-5 border-b border-slate-200 bg-white/60 backdrop-blur-sm flex flex-col gap-4 sticky top-0 z-20">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-lg">📚</span> Acervo
-                            </h2>
-                            <p class="text-[10px] text-slate-500 mt-0.5 font-medium uppercase tracking-wide">Matéria > Conceito > Cards</p>
-                        </div>
-                        <button onclick="confirmClearStorage()" class="text-xs bg-white border border-red-100 text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg font-bold transition">Limpar</button>
-                    </div>
-                    <div class="relative group">
-                        <input type="text" id="search-input" placeholder="Filtrar..." class="w-full pl-10 pr-4 py-2.5 bg-white/80 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-medical-500 focus:ring-1 focus:ring-medical-500 transition shadow-sm">
-                        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3 group-focus-within:text-medical-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
-                </div>
-                <div id="library-container" class="p-5 space-y-3 flex-1 overflow-y-auto bg-slate-50/30 custom-scroll">
-                    <!-- Cards -->
-                </div>
-            </div>
+        <label style="font-weight: bold; display: block; margin-bottom: 1rem; text-align: center;">A resolução é fluida?</label>
+        <div class="stars" id="stars-resolucao">
+            <svg class="star" onclick="setRating('resolucao', 1)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('resolucao', 2)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('resolucao', 3)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('resolucao', 4)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('resolucao', 5)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <textarea id="obs-resolucao" placeholder="A troca de questões foi rápida?"></textarea>
+        <div class="button-group">
+            <button class="btn-secondary" onclick="nextStep(2)">Voltar</button>
+            <button class="btn-primary" id="btn-next-3" disabled onclick="nextStep(4)">Próxima Missão</button>
         </div>
     </div>
 
-    <!-- MAIN CONTENT - ROW 2 (Dashboard / Calendário Full Width) -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <div class="glass-panel rounded-3xl shadow-xl shadow-slate-200/50 p-8 bg-white/80">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                        <span class="bg-amber-100 text-amber-600 p-2 rounded-xl">📅</span> 
-                        Dashboard de Revisão
-                    </h2>
-                    <p class="text-sm text-slate-500 ml-1 mt-1">Visualize suas próximas revisões agendadas</p>
-                </div>
-                
-                <div class="flex items-center gap-4 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-                    <button onclick="changeMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
-                    <span id="current-month-year" class="font-bold text-slate-700 w-32 text-center select-none text-lg">...</span>
-                    <button onclick="changeMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <!-- CALENDÁRIO VISUAL (Maior) -->
-                <div class="lg:col-span-8">
-                    <div id="calendar-grid" class="grid grid-cols-7 gap-4 text-center select-none">
-                        <!-- Headers -->
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest py-2">Dom</div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest py-2">Seg</div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest py-2">Ter</div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest py-2">Qua</div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest py-2">Qui</div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest py-2">Sex</div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest py-2">Sab</div>
-                        <!-- Dias gerados via JS -->
-                    </div>
-                </div>
-
-                <!-- LISTA DE PRÓXIMAS REVISÕES (Mais robusta) -->
-                <div class="lg:col-span-4 border-l border-slate-200 pl-8 flex flex-col h-full">
-                    <div class="flex justify-between items-center mb-4">
-                        <h4 class="font-bold text-slate-700 uppercase tracking-wider text-sm">Próximas Revisões</h4>
-                        <button onclick="fetchUpcomingEvents()" class="text-xs text-medical-600 hover:underline font-bold bg-medical-50 px-2 py-1 rounded">Atualizar</button>
-                    </div>
-                    
-                    <div id="calendar-widget" class="space-y-3 flex-1 overflow-y-auto custom-scroll pr-2 max-h-[300px]">
-                        <!-- Itens da lista -->
-                        <div class="text-center text-slate-400 text-sm py-10 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                            Faça login no Google para sincronizar.
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div id="step-4" class="card">
+        <div class="progress-container"><div class="progress-dot active"></div><div class="progress-dot active"></div><div class="progress-dot active"></div><div class="progress-dot active"></div></div>
+        <h2>4. Interface e Alertas</h2>
+        <div class="mission-box">
+            <strong>Seu objetivo:</strong>
+            Observe a tela de carregamento (Eletrocardiograma) ao entrar e force algum alerta (ex: clicar no botão 'Sair' ou salvar algo) para ver os Modais.
+        </div>
+        <label style="font-weight: bold; display: block; margin-bottom: 1rem; text-align: center;">O design está bonito?</label>
+        <div class="stars" id="stars-ui">
+            <svg class="star" onclick="setRating('ui', 1)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('ui', 2)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('ui', 3)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('ui', 4)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg class="star" onclick="setRating('ui', 5)" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <textarea id="obs-ui" placeholder="Algo no visual te incomodou?"></textarea>
+        <div class="button-group">
+            <button class="btn-secondary" onclick="nextStep(3)">Voltar</button>
+            <button class="btn-primary" id="btn-next-4" disabled onclick="nextStep(5)">Ir para o Fim</button>
         </div>
     </div>
 
-    <!-- MODAL PREVIEW -->
-    <div id="modal-preview" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md hidden z-[100] flex items-center justify-center p-4 transition-all opacity-0">
-        <div class="bg-white rounded-[2rem] max-w-6xl w-full h-[90vh] overflow-hidden relative shadow-2xl flex flex-col ring-1 ring-white/20">
-            <div class="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-white z-10">
-                <div>
-                    <h3 class="text-xl font-bold text-slate-800">Visualização do Card</h3>
-                    <p class="text-xs text-slate-500 font-medium">Prévia de impressão e download</p>
-                </div>
-                <button onclick="closeModal()" class="bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-full p-2.5 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-8 bg-slate-50 custom-scroll">
-                <div id="modal-render-area" class="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl mx-auto"></div>
-            </div>
+    <div id="step-5" class="card">
+        <h2>Considerações Finais</h2>
+        <p>Achou algum bug? Tem alguma sugestão de nova funcionalidade? Escreva abaixo tudo o que vier à cabeça.</p>
+        <textarea id="obs-geral" placeholder="Ex: Tudo ótimo, mas achei um erro ao tentar..." style="height: 150px;"></textarea>
+        
+        <div class="button-group">
+            <button class="btn-secondary" onclick="nextStep(4)">Voltar</button>
+            <button class="btn-success" onclick="gerarRelatorio()">
+                Gerar Relatório .TXT
+                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <div id="step-6" class="card" style="text-align: center;">
+        <svg style="width: 80px; height: 80px; color: var(--success); margin: 0 auto 1.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h2>Feedback Registrado!</h2>
+        <p>O arquivo de relatório (.txt) foi baixado no seu dispositivo com sucesso.</p>
+        <div style="background: #eff6ff; color: #1e3a8a; padding: 1rem; border-radius: 0.75rem; border: 1px solid #bfdbfe; font-weight: bold; font-size: 0.875rem;">
+            Por favor, envie este arquivo para o desenvolvedor analisar. Muito obrigado pelo seu tempo!
         </div>
     </div>
 
     <script>
-        // === CREDENCIAIS ===
-        const CLIENT_ID = '477548483924-e8aritdjhs9emuu23s67cqa4pcc0kc4j.apps.googleusercontent.com'; 
-        const API_KEY = 'AIzaSyBCi_WyOv0M6QPiIklXgP4DshN8Y6vWM3s'; 
-        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-        const SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
-        // ==================
+        // --- DADOS DO FEEDBACK ---
+        const feedback = {
+            nome: '',
+            forum: { nota: 0, comentario: '' },
+            pdf: { nota: 0, comentario: '' },
+            resolucao: { nota: 0, comentario: '' },
+            ui: { nota: 0, comentario: '' },
+            geral: ''
+        };
 
-        const BG_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
-
-        let tokenClient;
-        let gapiInited = false;
-        let library = JSON.parse(localStorage.getItem('flashcardLibrary')) || [];
-        let currentImageSrc = null;
-        let editingId = null;
-        let calCurrentDate = new Date();
-        let calEventsCache = {};
-
-        // --- INIT ---
-        function initGoogleAPI() {
-            gapi.load('client', async () => {
-                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC] });
-                gapiInited = true;
-                renderCalendar(); 
-                if(gapi.client.getToken()) {
-                    await fetchMonthEvents();
-                    fetchUpcomingEvents();
-                    fetchUserProfile();
-                }
+        // --- NAVEGAÇÃO ENTRE PASSOS ---
+        function nextStep(stepIndex) {
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.remove('active');
             });
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID, scope: SCOPES, callback: ''
-            });
-            renderLibrary();
+            document.getElementById(`step-${stepIndex}`).classList.add('active');
         }
 
-        function handleAuthClick() {
-            tokenClient.callback = async (resp) => {
-                if (resp.error) throw (resp);
-                await fetchMonthEvents();
-                fetchUpcomingEvents();
-                fetchUserProfile();
-            };
-            if (gapi.client.getToken() === null) {
-                tokenClient.requestAccessToken({prompt: 'consent'});
-            } else {
-                tokenClient.requestAccessToken({prompt: ''});
-            }
+        // --- VALIDAÇÃO DO NOME (HABILITAR BOTÃO INICIAR) ---
+        function checkName() {
+            const nomeInput = document.getElementById('input-nome').value;
+            feedback.nome = nomeInput;
+            document.getElementById('btn-iniciar').disabled = nomeInput.trim() === '';
         }
 
-        async function fetchUserProfile() {
-            if(!gapi.client.getToken()) return;
-            try {
-                const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                    headers: { 'Authorization': `Bearer ${gapi.client.getToken().access_token}` }
-                });
-                const user = await response.json();
-                document.getElementById('auth-btn').classList.add('hidden');
-                document.getElementById('user-profile').classList.remove('hidden');
-                document.getElementById('user-profile').classList.add('flex');
-                document.getElementById('user-name').textContent = user.given_name || "Estudante";
-                document.getElementById('user-avatar').src = user.picture || "https://ui-avatars.com/api/?name=User";
-            } catch(e) { console.error("Erro perfil", e); }
-        }
-
-        function handleSignOut() {
-            const token = gapi.client.getToken();
-            if (token !== null) {
-                google.accounts.oauth2.revoke(token.access_token);
-                gapi.client.setToken('');
-                document.getElementById('auth-btn').classList.remove('hidden');
-                document.getElementById('user-profile').classList.add('hidden');
-                document.getElementById('user-profile').classList.remove('flex');
-                showToast("Desconectado", "error");
-            }
-        }
-
-        // --- CALENDAR VISUAL (Dashboard) ---
-        function renderCalendar() {
-            const year = calCurrentDate.getFullYear();
-            const month = calCurrentDate.getMonth();
-            const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-            document.getElementById('current-month-year').textContent = `${monthNames[month]} ${year}`;
-
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            const startDayOfWeek = firstDay.getDay(); 
-
-            const grid = document.getElementById('calendar-grid');
-            // Remove dias (mantém headers)
-            while(grid.children.length > 7) { grid.removeChild(grid.lastChild); }
-
-            for(let i=0; i<startDayOfWeek; i++) {
-                const div = document.createElement('div');
-                div.className = 'calendar-day empty';
-                grid.appendChild(div);
-            }
-
-            const today = new Date();
-            for(let i=1; i<=daysInMonth; i++) {
-                const div = document.createElement('div');
-                div.className = 'calendar-day text-base text-slate-700 font-medium h-12 w-12 mx-auto rounded-full hover:bg-slate-100 flex items-center justify-center relative transition-all';
-                div.textContent = i;
-                
-                if(i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
-                    div.classList.add('today', 'bg-medical-500', 'text-white', 'shadow-md');
-                }
-
-                const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-                if(calEventsCache[dateKey]) {
-                    const indicator = document.createElement('div');
-                    indicator.className = 'absolute bottom-1.5 w-1.5 h-1.5 rounded-full bg-amber-500';
-                    if(div.classList.contains('today')) indicator.className += ' bg-white';
-                    div.appendChild(indicator);
-                    div.title = `${calEventsCache[dateKey].length} revisões`;
-                }
-                grid.appendChild(div);
-            }
-        }
-
-        async function fetchMonthEvents() {
-            if (!gapi.client.getToken()) return;
-            const year = calCurrentDate.getFullYear();
-            const month = calCurrentDate.getMonth();
-            const timeMin = new Date(year, month, 1).toISOString();
-            const timeMax = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
-
-            try {
-                const response = await gapi.client.calendar.events.list({
-                    'calendarId': 'primary', 'timeMin': timeMin, 'timeMax': timeMax,
-                    'showDeleted': false, 'singleEvents': true, 'q': 'Rev'
-                });
-                calEventsCache = {};
-                const events = response.result.items;
-                events.forEach(ev => {
-                    const date = (ev.start.dateTime || ev.start.date).split('T')[0];
-                    if(!calEventsCache[date]) calEventsCache[date] = [];
-                    calEventsCache[date].push(ev);
-                });
-                renderCalendar();
-            } catch(e) { console.error(e); }
-        }
-
-        function changeMonth(delta) {
-            calCurrentDate.setMonth(calCurrentDate.getMonth() + delta);
-            renderCalendar();
-            fetchMonthEvents();
-        }
-
-        // --- FLASHCARD LOGIC ---
-        document.getElementById('input-image').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    currentImageSrc = ev.target.result;
-                    document.getElementById('preview-thumb').src = currentImageSrc;
-                    document.getElementById('preview-thumb').classList.remove('hidden');
-                }
-                reader.readAsDataURL(file);
-            }
-        });
-
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            const filtered = library.filter(card => 
-                card.subject.toLowerCase().includes(term) || 
-                card.concept.toLowerCase().includes(term) ||
-                card.question.toLowerCase().includes(term)
-            );
-            renderLibrary(filtered);
-        });
-
-        function showToast(msg, type="success") {
-            const toast = document.getElementById('toast-container');
-            const content = document.getElementById('toast-content');
-            const icon = document.getElementById('toast-icon');
-            document.getElementById('toast-msg').textContent = msg;
-            if(type === 'error') {
-                content.classList.replace('bg-slate-800', 'bg-red-600'); icon.textContent = '⚠️';
-            } else {
-                content.classList.replace('bg-red-600', 'bg-slate-800'); icon.textContent = '✓';
-            }
-            toast.classList.remove('opacity-0', 'translate-y-[-20px]');
-            setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-[-20px]'); }, 3000);
-        }
-
-        function showConfirm(msg, onConfirm) {
-            const modal = document.getElementById('modal-confirm');
-            document.getElementById('confirm-msg').textContent = msg;
-            modal.classList.remove('hidden');
-            const btn = document.getElementById('confirm-btn-action');
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-            newBtn.addEventListener('click', () => { onConfirm(); closeConfirm(); });
-        }
-        function closeConfirm() { document.getElementById('modal-confirm').classList.add('hidden'); }
-
-        document.getElementById('btn-save').addEventListener('click', async () => {
-            const s = document.getElementById('input-subject').value.trim();
-            const c = document.getElementById('input-concept').value.trim();
-            const q = document.getElementById('input-q').value.trim();
-            const a = document.getElementById('input-a').value.trim();
-            const autoSync = document.getElementById('auto-sync-toggle').checked;
-
-            if(!s || !c || !q || !a) return showToast("Preencha todos os campos!", "error");
-
-            if (editingId) {
-                const index = library.findIndex(card => card.id === editingId);
-                if (index !== -1) {
-                    library[index] = { ...library[index], subject: s, concept: c, question: q, answer: a, image: currentImageSrc || library[index].image };
-                    showToast("Card atualizado!");
-                    cancelEdit();
-                }
-            } else {
-                const newCard = {
-                    id: Date.now(), subject: s, concept: c, question: q, answer: a,
-                    image: currentImageSrc, createdAt: new Date().toISOString()
-                };
-                library.unshift(newCard);
-                showToast("Card criado!");
-                if(autoSync) {
-                    if(gapi.client.getToken()) await addToGoogleCalendar(newCard.id, true);
-                    else showToast("Conecte Calendar para auto-sync", "error");
-                }
-            }
-            localStorage.setItem('flashcardLibrary', JSON.stringify(library));
-            renderLibrary();
-            if (!editingId) { document.getElementById('input-q').value = ''; document.getElementById('input-a').value = ''; }
-        });
-
-        window.editCard = (id) => {
-            const card = library.find(c => c.id === id);
-            if(!card) return;
-            document.getElementById('input-subject').value = card.subject;
-            document.getElementById('input-concept').value = card.concept;
-            document.getElementById('input-q').value = card.question;
-            document.getElementById('input-a').value = card.answer;
-            editingId = id; currentImageSrc = card.image;
-            if(card.image) {
-                document.getElementById('preview-thumb').src = card.image;
-                document.getElementById('preview-thumb').classList.remove('hidden');
-            } else { document.getElementById('preview-thumb').classList.add('hidden'); }
+        // --- LÓGICA DAS ESTRELAS ---
+        function setRating(missao, nota) {
+            feedback[missao].nota = nota;
             
-            document.getElementById('editor-title').innerHTML = `<span class="bg-amber-100 text-amber-600 p-1.5 rounded-lg">✏️</span> Editando Card`;
-            document.getElementById('btn-save-text').textContent = "Atualizar Card";
-            document.getElementById('btn-cancel-edit').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-
-        window.cancelEdit = () => {
-            editingId = null; currentImageSrc = null;
-            document.getElementById('input-subject').value = ''; document.getElementById('input-concept').value = '';
-            document.getElementById('input-q').value = ''; document.getElementById('input-a').value = '';
-            document.getElementById('preview-thumb').classList.add('hidden'); document.getElementById('input-image').value = '';
-            document.getElementById('editor-title').innerHTML = `<span class="bg-blue-100 text-blue-600 p-1.5 rounded-lg">⚡</span> Criar Card`;
-            document.getElementById('btn-save-text').textContent = "Salvar Flashcard";
-            document.getElementById('btn-cancel-edit').classList.add('hidden');
-        };
-
-        function renderLibrary(dataSet = library) {
-            const container = document.getElementById('library-container');
-            if (dataSet.length === 0) {
-                container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-400 opacity-60"><p>Vazio</p></div>`; return;
-            }
-            const tree = {};
-            dataSet.forEach(card => {
-                const s = card.subject.toUpperCase(); const c = card.concept.toUpperCase();
-                if (!tree[s]) tree[s] = {}; if (!tree[s][c]) tree[s][c] = [];
-                tree[s][c].push(card);
-            });
-
-            let html = "";
-            for (const [subject, concepts] of Object.entries(tree)) {
-                html += `
-                    <div class="mb-4 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div class="folder-header bg-slate-50 px-4 py-3 border-b border-slate-100 flex justify-between items-center cursor-pointer" onclick="toggle('${subject.replace(/\s/g,'_')}')">
-                            <div class="flex items-center gap-3">
-                                <span class="bg-amber-100 text-amber-600 p-1.5 rounded-lg border border-amber-200">
-                                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>
-                                </span>
-                                <span class="font-bold text-slate-700">${subject}</span>
-                            </div>
-                            <svg class="w-5 h-5 text-slate-400 transition-transform" id="icon-${subject.replace(/\s/g,'_')}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                        </div>
-                        <div id="sec-${subject.replace(/\s/g,'_')}" class="hidden bg-slate-50/50 p-2 space-y-2">
-                `;
-                for (const [concept, cards] of Object.entries(concepts)) {
-                    html += `
-                        <div class="subfolder ml-4 border-l-2 border-slate-200 pl-4">
-                            <div class="subfolder-header flex justify-between items-center py-2 px-2 rounded cursor-pointer hover:bg-slate-100" onclick="toggleSub('${subject.replace(/\s/g,'_')}-${concept.replace(/\s/g,'_')}')">
-                                <div class="flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-medical-500"></span>
-                                    <span class="font-semibold text-slate-600 text-sm">${concept}</span>
-                                    <span class="text-[10px] bg-slate-200 px-1.5 rounded text-slate-500">${cards.length}</span>
-                                </div>
-                                <svg class="w-4 h-4 text-slate-400 transition-transform" id="icon-sub-${subject.replace(/\s/g,'_')}-${concept.replace(/\s/g,'_')}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                            </div>
-                            <div id="sub-${subject.replace(/\s/g,'_')}-${concept.replace(/\s/g,'_')}" class="hidden space-y-2 mt-2">
-                                ${cards.map(card => `
-                                    <div class="bg-white p-3 rounded-lg border border-slate-200 hover:shadow-md transition flex justify-between items-center group">
-                                        <p class="text-xs text-slate-500 truncate w-40 md:w-56 font-medium">${card.question}</p>
-                                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                                            <button onclick="editCard(${card.id})" class="text-[10px] bg-amber-50 text-amber-600 px-2 py-1 rounded hover:bg-amber-100 font-bold" title="Editar">✏️</button>
-                                            <button onclick="openPreview(${card.id})" class="text-[10px] bg-slate-100 px-2 py-1 rounded hover:bg-slate-200 font-bold">Ver</button>
-                                            <button onclick="addToGoogleCalendar(${card.id})" class="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded hover:bg-green-100 font-bold" title="Agendar">📅</button>
-                                            <button onclick="deleteCard(${card.id})" class="text-red-400 hover:text-red-600">✕</button>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>`;
+            // Pinta as estrelas
+            const container = document.getElementById(`stars-${missao}`);
+            const stars = container.querySelectorAll('.star');
+            
+            stars.forEach((star, index) => {
+                if (index < nota) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
                 }
-                html += `</div></div>`;
-            }
-            container.innerHTML = html;
+            });
+
+            // Habilita o botão de avançar daquela missão específica
+            let btnIndex = missao === 'forum' ? 1 : missao === 'pdf' ? 2 : missao === 'resolucao' ? 3 : 4;
+            document.getElementById(`btn-next-${btnIndex}`).disabled = false;
         }
 
-        window.toggle = (id) => {
-            document.getElementById(`sec-${id}`).classList.toggle('hidden');
-            document.getElementById(`icon-${id}`).classList.toggle('rotate-90');
-        };
-        window.toggleSub = (id) => {
-            document.getElementById(`sub-${id}`).classList.toggle('hidden');
-            document.getElementById(`icon-sub-${id}`).classList.toggle('rotate-90');
-        };
-        window.deleteCard = (id) => {
-            showConfirm("Apagar card permanentemente?", () => {
-                library = library.filter(c => c.id !== id);
-                localStorage.setItem('flashcardLibrary', JSON.stringify(library));
-                renderLibrary(); showToast("Apagado!", "success");
-            });
-        };
-        window.confirmClearStorage = () => {
-            showConfirm("Apagar TODA a biblioteca?", () => {
-                localStorage.removeItem('flashcardLibrary'); library=[]; renderLibrary(); showToast("Limpo!", "success");
-            });
-        };
+        // --- GERAR E BAIXAR O ARQUIVO TXT ---
+        function gerarRelatorio() {
+            // Coleta os textos das caixas antes de gerar
+            feedback.forum.comentario = document.getElementById('obs-forum').value;
+            feedback.pdf.comentario = document.getElementById('obs-pdf').value;
+            feedback.resolucao.comentario = document.getElementById('obs-resolucao').value;
+            feedback.ui.comentario = document.getElementById('obs-ui').value;
+            feedback.geral = document.getElementById('obs-geral').value;
 
-        // --- CALENDAR WIDGET ---
-        async function fetchUpcomingEvents() {
-            if (!gapi.client.getToken()) return;
-            const widget = document.getElementById('calendar-widget');
-            widget.innerHTML = `<div class="flex justify-center"><div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div></div>`;
-            try {
-                const response = await gapi.client.calendar.events.list({
-                    'calendarId': 'primary', 'timeMin': (new Date()).toISOString(), 'showDeleted': false,
-                    'singleEvents': true, 'maxResults': 10, 'orderBy': 'startTime', 'q': 'Rev'
-                });
-                const events = response.result.items;
-                if (events.length > 0) {
-                    widget.innerHTML = events.map(event => {
-                        const date = new Date(event.start.dateTime || event.start.date);
-                        const days = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
-                        const dayName = days[date.getDay()];
-                        const link = event.htmlLink ? `<a href="${event.htmlLink}" target="_blank" class="text-xs text-blue-500 hover:underline ml-auto">Abrir</a>` : '';
-                        
-                        return `
-                            <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 text-sm shadow-sm hover:shadow-md transition">
-                                <div class="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg font-bold text-center leading-tight min-w-[50px]">
-                                    <div class="text-[10px] uppercase text-blue-400">${dayName}</div>
-                                    <div class="text-base">${date.getDate()}</div>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="truncate font-bold text-slate-700">${event.summary}</div>
-                                    <div class="text-[10px] text-slate-400">Revisão Agendada</div>
-                                </div>
-                                ${link}
-                            </div>`;
-                    }).join('');
-                } else { widget.innerHTML = `<div class="text-center text-slate-400 text-xs py-4">Sem revisões próximas.</div>`; }
-            } catch (err) { console.error(err); }
+            // Monta o texto bonitinho
+            const relatorio = `
+===================================================
+RELATÓRIO DE TESTE BETA - MEDICINA JVS
+===================================================
+Testador: ${feedback.nome || 'Anônimo'}
+Data do Teste: ${new Date().toLocaleString('pt-BR')}
+---------------------------------------------------
+
+1. FÓRUM DE DÚVIDAS
+Nota: ${feedback.forum.nota} / 5
+Comentário: ${feedback.forum.comentario || 'Sem comentários.'}
+
+2. GERAÇÃO DE PDF
+Nota: ${feedback.pdf.nota} / 5
+Comentário: ${feedback.pdf.comentario || 'Sem comentários.'}
+
+3. MOTOR DE QUESTÕES
+Nota: ${feedback.resolucao.nota} / 5
+Comentário: ${feedback.resolucao.comentario || 'Sem comentários.'}
+
+4. INTERFACE E ALERTAS (UX)
+Nota: ${feedback.ui.nota} / 5
+Comentário: ${feedback.ui.comentario || 'Sem comentários.'}
+
+---------------------------------------------------
+FEEDBACK GERAL E BUGS ENCONTRADOS:
+${feedback.geral || 'Nenhum bug reportado.'}
+===================================================
+`;
+
+            // Lógica mágica de download no Vanilla JS
+            const blob = new Blob([relatorio], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            
+            // Remove espaços do nome para o arquivo ficar bonito (ex: Feedback_Beta_Joao_Victor.txt)
+            const nomeFormatado = feedback.nome.replace(/\s+/g, '_') || 'Anonimo';
+            link.download = `Feedback_Beta_${nomeFormatado}.txt`;
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            // Manda pra tela final de sucesso
+            nextStep(6);
         }
-
-        async function addToGoogleCalendar(cardId, silent = false) {
-            if (!gapi.client.getToken()) { if(!silent) alert("Conecte o Calendar."); return; }
-            const card = library.find(c => c.id === cardId);
-            if (!card) return;
-            if(!silent) { if(!confirm(`Agendar 8 revisões para "${card.concept}"?`)) return; }
-
-            let colorId = '9'; 
-            const mat = card.subject.toLowerCase();
-            if (mat.includes('cardio') || mat.includes('urg')) colorId = '11'; 
-            else if (mat.includes('neuro') || mat.includes('psiq')) colorId = '3'; 
-            else if (mat.includes('pediatria')) colorId = '5';
-            else if (mat.includes('gineco')) colorId = '4';
-
-            const intervals = [1, 3, 7, 14, 30, 60, 90, 120];
-            const batch = gapi.client.newBatch();
-            intervals.forEach(days => {
-                const date = new Date(); date.setDate(date.getDate() + days);
-                const dateStr = date.toISOString().split('T')[0];
-                batch.add(gapi.client.calendar.events.insert({ 
-                    'calendarId': 'primary', 
-                    'resource': {
-                        'summary': `🧠 Rev: ${card.concept} (${card.subject})`,
-                        'description': `REVISÃO ${days}d\n\n[P] ${card.question}\n\n[R] ${card.answer}`,
-                        'start': { 'date': dateStr }, 'end': { 'date': dateStr },
-                        'colorId': colorId, 'transparency': 'transparent',
-                        'reminders': { 'useDefault': false, 'overrides': [{'method': 'popup', 'minutes': 540}] }
-                    }
-                }));
-            });
-            try {
-                await batch.then();
-                if(!silent) showToast("Agendado!", "success");
-                await fetchMonthEvents(); fetchUpcomingEvents();
-            } catch (err) { if(!silent) showToast("Erro Calendar", "error"); }
-        }
-
-        // --- PREVIEW ---
-        window.openPreview = (id) => {
-            const card = library.find(c => c.id === id);
-            const modal = document.getElementById('modal-preview');
-            const area = document.getElementById('modal-render-area');
-            modal.classList.remove('hidden');
-            setTimeout(() => modal.classList.remove('opacity-0'), 10);
-
-            const fmt = (t) => t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            const qFmt = fmt(card.question);
-            const aFmt = fmt(card.answer);
-            const imgHTML = card.image ? `<img src="${card.image}" class="flashcard-artwork">` : '';
-            const lSubj = `<div class="aux-text" style="top:5%; left:5%; background:#0ea5e9">${card.subject.toUpperCase()}</div>`;
-            const lConc = `<div class="aux-text" style="top:5%; right:5%">${card.concept.toUpperCase()}</div>`;
-
-            area.innerHTML = `
-                <div class="flex flex-col gap-4">
-                    <div class="text-center font-bold text-slate-500 uppercase text-sm">Frente</div>
-                    <div id="pf" class="flashcard-render-container shadow-2xl">
-                        <img src="${BG_BASE64}" class="flashcard-bg-img">
-                        ${lSubj}
-                        <div class="flashcard-text-overlay">
-                            <div class="font-flashcard" style="font-size:clamp(2rem,9cqi,3.5rem)">${qFmt}</div>
-                        </div>
-                    </div>
-                    <button onclick="dl('pf','${card.concept}_F')" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-900 transition flex items-center justify-center gap-2">⬇ Baixar</button>
-                </div>
-                <div class="flex flex-col gap-4">
-                    <div class="text-center font-bold text-slate-500 uppercase text-sm">Verso</div>
-                    <div id="pb" class="flashcard-render-container shadow-2xl">
-                        <img src="${BG_BASE64}" class="flashcard-bg-img">
-                        ${imgHTML}
-                        ${lConc}
-                        <div class="flashcard-text-overlay" style="justify-content:flex-start;padding-top:20%">
-                            <div class="font-flashcard" style="font-size:clamp(1rem,5cqi,2rem)">${aFmt}</div>
-                        </div>
-                    </div>
-                    <button onclick="dl('pb','${card.concept}_V')" class="w-full bg-slate-800 text-white py-4 rounded-xl font-bold hover:bg-slate-900 transition flex items-center justify-center gap-2">⬇ Baixar</button>
-                </div>
-            `;
-        };
-
-        window.closeModal = () => {
-            const modal = document.getElementById('modal-preview');
-            modal.classList.add('opacity-0');
-            setTimeout(() => modal.classList.add('hidden'), 300);
-        };
-
-        window.dl = (id, name) => {
-            html2canvas(document.getElementById(id), {useCORS:true, scale:2, backgroundColor:null}).then(c => {
-                const a = document.createElement('a'); a.download=name+".png"; a.href=c.toDataURL("image/png"); a.click();
-            });
-        };
     </script>
 </body>
 </html>
